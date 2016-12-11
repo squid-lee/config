@@ -1,0 +1,9 @@
+import Data.List as Li
+import Control.Applicative as Ap
+import Control.Arrow as Ar
+import Data.Monoid as Monoid
+
+let ato = flip asTypeOf
+let as = asTypeOf
+let d = (undefined :: Double)
+let i = (undefined :: Integer)

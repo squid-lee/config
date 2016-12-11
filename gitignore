@@ -1,0 +1,35 @@
+
+std*
+
+# Symlinks used by emacs for locking
+.#*
+
+# The saved history of R repls
+.*history
+
+# The output of strace
+*.strace
+
+# Tags files
+TAGS
+
+# Scala
+deps
+
+# Ensime (Emacs + scala)
+.ensime
+.ensime_cache
+
+# Python
+*.egg-info
+py3env
+pyenv
+
+# Intellij
+.idea
+
+# Gradle
+.gradle
+
+# Core Dumps
+core

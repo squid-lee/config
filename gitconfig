@@ -1,0 +1,14 @@
+[color]
+	ui = true
+[alias]
+        co = checkout # from mercurial
+	s = status # convenient
+        tags = tag # common typo
+
+[push]
+	default = simple
+
+[url "https://github"]
+	insteadOf = git://github # fixes Firewalls shitting things up
+[core]
+	excludesfile = /home/joseph/.gitignore # Doesn't resolve ~ here
