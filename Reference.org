@@ -220,7 +220,7 @@ SELECT * FROM [datagroup:dataset.__TABLES_SUMMARY__]
   chroot /mnt/chroot
 #+END_SRC
 * cOreos
-* Cannot access external address              :proxy:firewall:coreos:systemd:
+** Cannot access external address             :proxy:firewall:coreos:systemd:
    - from https://coreos.com/docs/launching-containers/building/customizing-docker/
    - http_proxy=proxy.example.com docker pull some/image:version12 fails, with i/o timeout
    - This is because http_proxy is set in the docker client, but its the server who pulls

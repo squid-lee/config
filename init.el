@@ -1,3 +1,15 @@
+(prefer-coding-system 'utf-8)
+
+;; If proxying for packages is required and not set at the system level
+;; (setq url-proxy-services
+;;       '(("no_proxy" . "regex")
+;;         ("http" . "regex")
+;;         ("https" . "regex")))
+
+;; A builtin of url-http for caching basicauth credentials
+;; (setq url-http-proxy-basic-auth-storage
+;; '(("proxy-name" ("Username: " . (base64-encode-string "LOGIN:PASSWORD"))))
+
 ;; For package management
 (setq package-archives '(("org" . "http://orgmode.org/elpa/") ; Org-mode's repository
                          ("melpa" . "http://melpa.org/packages/")
@@ -11,6 +23,10 @@
 (require 'use-package)
 
 (defalias 'plp 'package-list-packages)
+
+;; Keywords: Splitting horizontal vertical frame
+;; (setq split-height-threshold nil)
+;; (setq split-weight-threshold 0)
 
 ;; 2 spaces tabs
 (setq-default indent-tabs-mode nil)
@@ -39,6 +55,10 @@
 (setq inhibit-startup-screen t)
 (setq initial-scratch-message 'nil)
 
+;; (setq desktop-custom-folder "~/.emacs.d/desktop/")
+;; (setq desktop-path '(desktop-custom-folder))
+;; (unless (file-exists-p desktop-custom-folder)
+;;   (make-directory desktop-custom-folder))
 (desktop-save-mode t)
 
 ;; stop forcing me to spell out "yes"
@@ -46,7 +66,7 @@
 
 ;; Sets a nice default font, at a decent size (for 1920x1080 at 22")
 (set-face-attribute 'default nil
-                    :family "DejaVu Sans Mono"
+                    :family "DejaVu Sans Mono" ;; Inconsolata-8 works pretty well for windows, with no height set
                     :height 90
                     :weight 'normal
                     :width 'normal)
@@ -57,11 +77,12 @@
 ;  mark ring
 (setq set-mark-command-repeat-pop 't)
 
-;; General rebinding
-(global-set-key (kbd "C-c #") 'server-edit)
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
-(global-set-key (kbd "M-n") 'scroll-up-command)
-(global-set-key (kbd "M-p") 'scroll-down-command)
+;; General rebinding
+(global-set-key (kbd "M-*") 'pop-tag-mark)
+
+(global-set-key (kbd "C-c #") 'server-edit)
 
 (global-set-key (kbd "M-k") 'kill-sexp)
 
@@ -86,18 +107,19 @@
 
 (global-set-key (kbd "C-^") 'delete-blank-lines)
 
-;; Pick some better bindings for these
-(global-set-key (kbd "<F1> s") (lambda() (interactive) (switch-to-buffer "*scratch*")))
+(defun switch-to-scratch-buffer ()
+  (interactive)
+  (switch-to-buffer "*scratch*"))
+(global-set-key (kbd "<F1> s") 'switch-to-scratch-buffer)
 
 (global-set-key (kbd "C-x 4 k") 'kill-or-bury-other-buffer)
 
-
-
-(global-set-key (kbd "C-x i") (lambda ()
-                                (interactive)
-                                (insert (if buffer-file-name
-                                            (file-name-base)
-                                          (buffer-name)))))
+(defun insert-file-name-or-buffer-name ()
+  (interactive)
+  (insert (if buffer-file-name
+              (file-name-base)
+            (buffer-name))))
+(global-set-key (kbd "C-x i") 'insert-file-name-or-buffer-name)
 
 (defun just-zero-spaces ()
   (interactive)
@@ -107,15 +129,19 @@
 
 (global-set-key (kbd "<XF86Calculator>") 'calc)
 
+(global-set-key (kbd "C-x TAB") 'other-frame)
+
 ;; Unbound Keys
-;; find-file-readonly
-(global-unset-key (kbd "C-x C-r"))
-;; Find alternate file
+;; find-file-readonly, decided I actually like this
+;;(global-unset-key (kbd "C-x C-r"))
+;; Find alternate file, never helpful
 (global-unset-key (kbd "C-x C-v"))
-;; Suspend Frame
+;; Suspend Frame, never helpful
 (global-unset-key (kbd "C-z"))
-;; Backward delete paragraph
+;; Backward delete paragraph, never helpful
 (global-unset-key (kbd "C-x DEL"))
+;; Don't remove the ability to quit, but makes it a lot harder to accidentally quit
+(global-unset-key (kbd "C-x C-c"))
 
 ;; Enabled functions
 (put 'upcase-region 'disabled nil)
@@ -123,10 +149,8 @@
 (put 'downcase-region 'disabled nil)
 (put 'suspend-frame 'disabled t)
 (put 'set-goal-column 'disabled nil)
-
 (put 'erase-buffer 'disabled nil)
-;; Don't remove the ability to quit, but makes it a lot harder to accidentally quit
-(global-unset-key (kbd "C-x C-c"))
+
 
 (use-package ibuffer
   :bind ("C-x C-b" . ibuffer)
@@ -167,9 +191,18 @@
             (setq magit-push-always-verify nil)
             (setq magit-last-seen-setup-instructions "1.4.0")))
 
+(use-package magit-filenotify
+  :ensure t)
+
+;; If you need to set an ssh-agent (keywords ssh agent git gui askpass)
+;; (use-package ssh-agency ;; needs configuring
+
+(setq vc-follow-symlinks 't)
+
 (use-package git-timemachine
   :ensure t)
 
+;; TODO, investigate this package for other bits n bobs
 (use-package rectangle-utils
   :ensure t
   :bind ("C-x r e" . extend-rectangle-to-end))
@@ -229,16 +262,16 @@
 ;; Auto set some registers for faster access to commonly used files
 (set-register ?A '(file . "~/.aliases"))
 (set-register ?B '(file . "~/.bin/bin"))
-(set-register ?D '(file . "~/.org/deploymentProcess.org"))
+(set-register ?D (cons 'file (if (member system-type '(windows-nt cygwin))
+                                 "~/../../Downloads" ;; ~ is app data
+                               "~/Downloads")))
 (set-register ?E  (cons 'file user-init-file)) ;; has to be this form so the user-init-file is eval'd
-(set-register ?D  (cons 'file (if (member system-type '( windows-nt cygwin)) ;; eval as above
-                                  "~/../../Downloads/" ;; ~ is in app data
-                                "~/Downloads")))
-(set-register ?G '(file . "~/.gitconfig"))
+(set-register ?G '(file . "~/g/"))
 (set-register ?N '(file . "~/.org/Reference.org"))
+(set-register ?S '(file . "~/Scripts/generalScripts/"))
 (set-register ?T '(file . "~/.org/TODO.org"))
-(set-register ?V '(file . "~/.org/Videos.org"))
 (set-register ?U '(file . "~/.org/unix-toolkit.org"))
+(set-register ?W '(file . "~/.org/wishlist.org"))
 (set-register ?X '(file . "~/.xmonad/xmonad.hs"))
 (set-register ?Z '(file . "~/.zshrc"))
 
@@ -246,28 +279,69 @@
 (global-set-key (kbd "M-{") (lambda () (interactive) (point-to-register ?P)))
 (global-set-key (kbd "M-}") (lambda () (interactive) (jump-to-register ?P)))
 
+(use-package flycheck
+  :bind (:map flycheck-mode-map
+              ("M-n" . flycheck-next-error)
+              ("M-p" . flycheck-previous-error)))
+
+(defun add-new-import (new-import)
+  (interactive
+   (list (read-from-minibuffer "Module Name: " nil nil nil 'haskell-import-history)))
+  (save-excursion
+    (progn
+      (goto-char 0)
+      (re-search-forward "^import " nil nil)
+      (let ((processed-import (s-chop-prefix "import " (s-trim new-import))))
+        (insert processed-import)
+        (insert "\nimport ")
+        (message (concat "Imported " process-import))
+        (haskell-sort-imports)))))
+
+(defun insert-undefined ()
+  (interactive)
+  (insert "undefined"))
+
 ;; Haskell Mode
 (use-package haskell-mode
+  :ensure t
+  :bind (:map haskell-mode-map
+              ("C-c i" . add-new-import)
+              ("C-c C-u" . insert-undefined)
+              ("M-s h" . hoogle)
+              ;; ("M-." . ripgrep-haskell-definition)
+              )
+  :config (progn
+            (define-abbrev haskell-mode-abbrev-table "improt" "import")
+            (define-abbrev haskell-mode-abbrev-table "Bytestring" "ByteString")
+            (define-abbrev haskell-mode-abbrev-table "reutnr" "return")
+            (define-abbrev haskell-mode-abbrev-table "reutrn" "return")))
+
+;; Runs like garbage most of the time
+;; (use-package intero
+;;   :ensure t
+;;   :config (add-hook 'haskell-mode-hook 'intero-mode))
+
+(use-package haskell-snippets
   :ensure t)
 
-(use-package intero
-  :ensure t
-  :config (add-hook 'haskell-mode-hook 'intero-mode))
-
+;; (use-package ebal
+;;   :ensure t
+;;   :config
+;;   (add-hook 'haskell-mode-hook 'ebal-mode)
+;;   (setq ebal-operation-mode 'stack))
 
 (use-package zenburn-theme
   :ensure t
   :config (load-theme 'zenburn t))
 
-;; Necessary for sqldeveloper wrapper, Not windows compatible
+;; Necessary for sqldeveloper wrapper
 (setenv "TNS_ADMIN" "/usr/lib/oracle/12.2/client64/network/admin")
 
 ;; Needed for sbt to be found by emacs, because emacs maintains a
 ;; different $PATH to $USER, and because ensime reads the path
 ;; variable
-;; Not windows compatible
 (setq exec-path (append exec-path (list "~/.bin/bin")))
-(setenv "PATH" (concat "~/.bin/bin:" (getenv "PATH")))
+(setenv "PATH" (concat "/home/joseph/.bin/bin:" (getenv "PATH")))
 
 (use-package scala-mode2
   :ensure t)
@@ -277,12 +351,14 @@
 
 (use-package ensime
   :ensure t
+  :load-path "/home/joseph/g/ensime-emacs/"
   :bind ("M-*" . ensime-pop-find-definition-stack)
   :config (progn
           (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
-          ;; Necessary for ensime, Not windows compatible
-          (setenv "JDK_HOME" "/usr/lib/jvm/java-8-oracle/")
-          (setenv "JAVA_HOME" "/usr/lib/jvm/java-8-oracle/jre")))
+          ;; Necessary for ensime
+          (setq ensime-startup-notification nil)
+          (setenv "JDK_HOME" "/usr/lib/jvm/java-8-openjdk-amd64")
+          (setenv "JAVA_HOME" "/usr/lib/jvm/java-8-openjdk-amd64/jre")))
 
 (use-package rainbow-delimiters
   :ensure t
@@ -307,6 +383,7 @@
   :config (progn
             (define-key dired-mode-map (kbd "b") 'dired-up-directory-this-window)
             (define-key dired-mode-map (kbd "c") 'find-file)
+            ;; Iso timestyle may screw things up in windows (keywords ls time format)
             (setq dired-listing-switches "-Alh --time-style=long-iso")))
 
 ;; Expand stuff using M-/. tbh it sucks, but nothing better seems to exist
@@ -343,13 +420,8 @@
   backup-by-copying t      ; don't clobber symlinks
   backup-directory-alist '(("." . "~/.emacs.d/backups"))    ; don't litter my fs tree
   delete-old-versions :keep-all
-  version-control t)
-
-(setq auto-save-file-name-transforms
-          `((".*" "~/.emacs.d/auto-save-list" t)))
-
-;; Removes trailing whitespace upon saving save
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
+  version-control t
+  auto-save-file-name-transforms `((".*" "~/.emacs.d/auto-save-list" t)))
 
 ; Sets middle click paste to paste at point rather than click location
 (setq mouse-yank-at-point t)
@@ -360,7 +432,6 @@
 
 (global-set-key (kbd "S-<insert>") 'paste-from-x)
 
-;; Not currenlty doing ess related things
 ;; (use-package ess
 ;;   :ensure t
 ;;   :config (progn
@@ -378,16 +449,20 @@
 ;; Display column number as well as line number
 (setq column-number-mode t)
 
-;; Disable the fucking bell
+;; Disable the bell
 (setq visible-bell 't)
 
-;; Makes the default browser
+;; Sets the default browser
 (setq browse-url-browser-function 'browse-url-generic)
-(setq browse-url-generic-program (if (member system-type '( windows-nt cygwin))
-                                     "C:/Program Files (x86)/Mozilla Firefox/firefox.exe"
-                                   "/usr/bin/sensible-browser"))
+      ;; browse-url-generic-program "/usr/bin/firefox")
 
-(global-set-key (kbd "C-c e") 'eshell)
+(use-package eshell
+   :bind ("C-c e" . eshell))
+
+(defun open-register-in-background (register-name)
+  (save-window-excursion
+    (jump-to-register register-name)
+    (current-buffer)))
 
 (defun jump-to-register-other-window (register-name)
   "Open a register in the other window if file"
@@ -397,11 +472,6 @@
 
   (interactive "cJump to register: \n")
   (switch-to-buffer-other-window (open-register-in-background register-name)))
-
-(defun open-register-in-background (register-name)
-  (save-window-excursion
-    (jump-to-register register-name)
-    (current-buffer)))
 
 (global-set-key (kbd "C-x 4 j") 'jump-to-register-other-window)
 
@@ -417,6 +487,7 @@
 
 (use-package s
   :ensure t)
+
 (defun s-upper-snake-case (s)
   (s-upcase (s-snake-case s)))
 
@@ -450,9 +521,6 @@
          ("C-c C-m a" . mc/mark-all-words-like-this)
          ("C-c C-m n" . mc/insert-numbers)
          ("C-c C-m q" . prompt-for-insert)
-
-         ("C-c m C-n" . mc/mark-next-lines)
-         ("C-c C-m C-n" . mc/mark-next-lines)
 
          ("C->" . mc/mark-next-like-this)
          ("C-<" . mc/mark-previous-like-this)))
@@ -500,13 +568,12 @@
             (setq aw-background nil)))
 
 (defun avy-copy (char)
-  "Select a word using avy, and insert it"
   (interactive "cchar: \n")
-  (insert
-   (save-mark-and-excursion
-    (progn
-      (avy-goto-subword-1 char)
-      (word-at-point)))))
+  (let ((word (save-excursion
+                (progn
+                  (avy-goto-subword-1 char)
+                  (word-at-point)))))
+    (insert word)))
 
 (defun avy-subword-or-char (char)
   (interactive "cchar: \n")
@@ -569,11 +636,9 @@
 ;;             (defun javascript-moz-setup ()
 ;;               (moz-minor-mode 't))))
 
-(add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
 (add-to-list 'auto-mode-alist '("\\.scss\\'" . css-mode))
 (add-to-list 'auto-mode-alist '("\\.cl\\'" . lisp-mode))
 (add-to-list 'auto-mode-alist '("\\.Rmd\\'" . rmd-mode))
-(add-to-list 'auto-mode-alist '("\\.ino\\'" . c-mode)) ; ino is arduino
 
 (use-package expand-region
   :ensure t
@@ -613,7 +678,6 @@
     (insert (format "%s" value))))
 
 (global-set-key (kbd "C-c C-x C-e") 'eval-and-replace)
-(global-set-key (kbd "C-c x e") 'eval-and-replace)
 
 (use-package projectile
   :ensure t
@@ -621,9 +685,14 @@
             (projectile-global-mode)
             (setq projectile-enable-caching t)
             (setq projectile-completion-system 'default)
-            ;; Not windows compatible
-            (setq projectile-tags-command "/usr/bin/etags -R -f \"%s\" %s")
-            (setq ag-ignore-list '("*.min.js"))))
+            (setq projectile-tags-command (concat "/usr/bin/" projectile-tags-command))))
+
+(use-package projectile-ripgrep
+  :ensure t
+  :bind (:map projectile-mode-map
+              ("C-c p s s" . projectile-ripgrep)
+         :map ripgrip-search-mode-map
+              ("f" . compile-goto-error)))
 
 ;; Commands which move by line (e.g. C-a, C-e etc) move by 'real'
 ;; lines rather than visual lines so wrapped lines will still count as
@@ -634,9 +703,7 @@
   :init (progn
           (which-key-setup-side-window-bottom)
           (setq which-key-idle-delay 0.5)
-          (which-key-mode)
-          ;; Workaround for breaking change in https://github.com/emacs-mirror/emacs/commit/b8fd71d5709650c1aced92c772f70595c51881d2#diff-c8c1f7fce6ce8013f581877ead1a78f6L842
-          (defalias 'window--make-major-side-window 'display-buffer-in-major-side-window))
+          (which-key-mode))
   :ensure t)
 
 (use-package xkcd
@@ -647,28 +714,12 @@
   :bind (("C-%" . vr/query-replace)
          ("C-c m r" . vr/mc-mark)))
 
-(use-package coffee-mode
-  :ensure t)
-
-(define-key coffee-mode-map (kbd "C-M-H") 'backward-kill-word)
-
-;; Js2 mode uses this to decide indent instance
-(setq c-basic-offset 2)
-
-(define-minor-mode sticky-buffer-mode
-  "Make the current window always display this buffer."
-  nil " sticky" nil
-  (set-window-dedicated-p (selected-window) sticky-buffer-mode))
-
-
 (use-package smex
   :ensure t
-  :config (progn
-            (smex-initialize)
-            (global-set-key (kbd "M-x") 'smex)
-            (global-set-key (kbd "M-X") 'smex-major-mode-commands)
-            ;; This is the old M-x.
-            (global-set-key (kbd "C-c C-c M-x") 'execute-extended-command)))
+  :config (global-set-key (kbd "M-x") 'smex)
+          (global-set-key (kbd "M-X") 'smex-major-mode-commands)
+          ;; This is your old M-x.
+          (global-set-key (kbd "C-c C-c M-x") 'execute-extended-command))
 
 (defun make-temp-buffer ()
   (interactive)
@@ -707,7 +758,6 @@
             (setq org-use-speed-commands 't)
             (setq org-export-with-sub-superscripts nil)
             (setq org-directory "~/.org/")
-            (setq org-ellipsis "…")
 
             ;; Export wrangling
             (setq org-export-with-section-numbers nil)
@@ -722,19 +772,11 @@
              '((dot . t)
                (emacs-lisp . t)
                (haskell . t)
+               (php . t)
                (prolog . t)
                (R . t)
                (sh . t))))
   :pin org)
-
-
-;; Org eXport to reveal.js
-;; (use-package ox-reveal
-;;   :ensure t)
-
-
-(global-set-key (kbd "C-¬") 'exchange-point-and-mark)
-(global-set-key (kbd "M-C-¬") (lambda () (interactive) (exchange-point-and-mark t)))
 
 ; Built in package
 (use-package dired-x)
@@ -756,27 +798,35 @@
             (yas-reload-all)
             (yas-global-mode)))
 
-(setq python-indent-offset 2)
+(use-package rust-mode
+  :ensure t
+  :config (setq rust-format-on-save t))
+
+(use-package toml-mode
+  :ensure t)
+
+(use-package racer
+  :ensure t
+  :config
+  (add-hook 'rust-mode-hook #'racer-mode)
+  (add-hook 'racer-mode-hook #'eldoc-mode)
+  (add-hook 'racer-mode-hook #'company-mode)
+
+  (define-key rust-mode-map (kbd "TAB") #'company-indent-or-complete-common)
+  (setq company-tooltip-align-annotations t))
+
+(defun insert-python-debugger-break ()
+  (interacrtive)
+  (back-to-indentation)
+  (insert "import pdb; pdb.set_trace()")
+  (newline))
 
 (use-package python
   :defer t
-  :config
-  (progn
-    (define-key python-mode-map
-      (kbd "C-c C-d")
-      (lambda ()
-        (interactive)
-        (back-to-indentation)
-        (insert "import pdb; pdb.set_trace()")
-        (newline)))
-    (define-abbrev python-mode-abbrev-table "improt" "import")))
-
-(use-package jedi
-  :ensure t
-  :defer t
+  :bind ("C-c C-d" . insert-python-debugger-break)
   :config (progn
-            (add-hook 'python-mode-hook 'jedi:setup)
-            (setq jedi:complete-on-dot t)))
+            (setq python-indent-offset 2)
+            (define-abbrev python-mode-abbrev-table "improt" "import")))
 
 (setq enable-recursive-minibuffers 't)
 
@@ -809,8 +859,6 @@
   :bind (("M-i" . change-inner)
          ("M-o" . change-outer)))
 
-;; Easiest to just duplicate these fuckers, because they don't really
-;; share code that would be appropriate to advise
 (defadvice find-file (before make-directory-maybe (filename &optional wildcards) activate)
   "Create parent directory if not exists while visiting file."
   (unless (file-exists-p filename)
@@ -819,42 +867,13 @@
                (y-or-n-p (format "Create directory: %s" dir)))
           (make-directory dir 't)))))
 
-(defadvice find-file-other-window (before make-directory-maybe (filename &optional wildcards) activate)
-  "Create parent directory if not exists while visiting file."
-  (unless (file-exists-p filename)
-    (let ((dir (file-name-directory filename)))
-      (if (and (not (file-exists-p dir))
-               (y-or-n-p (format "Create directory: %s" dir)))
-          (make-directory dir 't)))))
-
-(defadvice find-file-other-frame (before make-directory-maybe (filename &optional wildcards) activate)
-  "Create parent directory if not exists while visiting file."
-  (unless (file-exists-p filename)
-    (let ((dir (file-name-directory filename)))
-      (if (and (not (file-exists-p dir))
-               (y-or-n-p (format "Create directory: %s" dir)))
-          (make-directory dir 't)))))
-
-;; (use-package poly-R
-;;   :ensure t)
-;; (use-package poly-markdown
-;;   :ensure t)
-
-;; (defun rmd-mode ()
-;;   "ESS Markdown mode for rmd files"
-;;   (interactive)
-;;   (setq load-path
-;;     (append (list "path/to/polymode/" "path/to/polymode/modes/")
-;;         load-path))
-;;   (poly-markdown+r-mode))
-
 (use-package markdown-mode
   :ensure t)
 
 (use-package markdown-mode+
   :ensure t)
 
-;; UGLY
+
 (define-generic-mode 'strace-mode
   '("+++")                 ;; treat +++ as a comment - it sort of is
   '("accept"              "accept4"                 "access"
@@ -1024,10 +1043,6 @@
     (let ((json-encoding-pretty-print t))
       (insert (json-encode (json-read-from-string (current-kill 0)))))))
 
-;; Not windows compatible
-(setq inferior-lisp-program "/usr/bin/sbcl")
-(setq slime-contribs '(slime-fancy))
-
 ;; (use-package paredit
 ;;   :ensure t)
 
@@ -1038,19 +1053,8 @@
      (or (get-char-code-property chr 'name)
          (get-char-code-property chr 'old-name)))))
 
-;; This package just isn't really up to snuff
-;; (use-package corral
-;;   :ensure t
-;;   :bind (("C-(" . corral-parentheses-backward)
-;;          ("C-)" . corral-parentheses-forward)
-;;          ("C-\""  . corral-double-quotes-backward))
-;;   ;; Get the point to stay where it is instead of following the delimiters
-;;   :config (setq corral-preserve-point t)
-;;   :pin melpa)
-
 ;; Query iff buffer is called *Messages*
 (defun prevent-buffer-death ()
-  "Used as a hook to prevent the message buffer being killed"
   (let ((b (buffer-name)))
     (or (not (string= b "*Messages*"))
         (y-or-n-p (concat "Really kill " b)))))
@@ -1070,24 +1074,10 @@
   (if prefix
       (insert (with-temp-buffer
                 (yank-rectangle)
-                (replace-string "
-"
-                               (read-string "Join rectangle with: ")
-                               nil ; delimited
-                               0
-                               (point-max))
+                (query-replace "
+                " (read-string "Join rectangle with: "))
                 (buffer-string)))
     (yank-rectangle)))
-
-(global-set-key (kbd "C-x r y") 'my-rectangle-yank)
-
-(defun my-surround-with-quotes (region-start region-end)
-  (interactive "r")
-  (save-mark-and-excursion
-   (goto-char region-end) (insert "\"")
-   (goto-char region-start) (insert "\"")))
-
-(global-set-key (kbd "C-\"") 'my-surround-with-quotes)
 
 (setq-default abbrev-mode t)
 
@@ -1100,6 +1090,10 @@
 (use-package systemd
   :ensure t)
 
+;; Check github for usage. Not yet enabled / configured
+(use-package eno
+  :ensure t)
+
 (use-package yaml-mode
   :ensure t)
 
@@ -1109,37 +1103,30 @@
 (use-package ag
   :ensure t)
 
-;; Seems borked in emacs 25
-;; (use-package protobuf-mode
-;;   :ensure t
-;;   :config (progn
-;;           (bind-key "C-M-h" 'backward-kill-word protobuf-mode-map)
-;;           (add-hook 'protobuf-mode-hook 'rainbow-delimiters-mode-enable)))
-
 (use-package crontab-mode
   :ensure t)
 
 (use-package crappy-jsp-mode
   :ensure t)
 
-(use-package geiser
+(use-package browse-kill-ring
   :ensure t)
 
-;; (use-package super-save
-;;   :ensure t
-;;   :init (super-save-initialize))
+(use-package browse-kill-ring+
+  :ensure t)
 
+(use-package scad-mode
+  :ensure t)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(geiser-default-implementation (quote guile))
- '(magit-rebase-arguments (quote ("--autostash")))
  '(package-selected-packages
    (quote
-    (graphviz-dot-mode geiser cmake-mode crappy-jsp-mode crontab-mode rust-mode org ob-prolog dot-mode ess-smart-underscore ess protobuf-mode which-key ag puppet-mode yaml-mode eno systemd go-mode hydra corral undo-tree markdown-mode+ markdown-mode change-inner transpose-frame dockerfile-mode ox-reveal smex coffee-mode visual-regexp xkcd guide-key projectile expand-region js2-mode ace-window avy-zap iy-go-to-char mc-extras multiple-cursors rainbow-delimiters ensime scala-mode2 zenburn-theme haskell-mode rectangle-utils git-timemachine magit use-package "use-package" "use-package" "use-package"))))
+    (org ob-prolog dot-mode ess-smart-underscore ess protobuf-mode which-key ag puppet-mode yaml-mode eno systemd go-mode hydra corral undo-tree markdown-mode+ markdown-mode change-inner transpose-frame dockerfile-mode ox-reveal coffee-mode visual-regexp xkcd guide-key projectile expand-region js2-mode ace-window avy-zap iy-go-to-char mc-extras multiple-cursors rainbow-delimiters ensime scala-mode2 zenburn-theme haskell-mode rectangle-utils git-timemachine magit use-package "use-package" "use-package" "use-package"))))
+
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -1154,29 +1141,3 @@
  '(rainbow-delimiters-depth-7-face ((t (:foreground "cyan2"))))
  '(rainbow-delimiters-depth-8-face ((t (:foreground "MediumOrchid1"))))
  '(rainbow-delimiters-unmatched-face ((t (:foreground "magenta")))))
-
-(defun junk-buffer-p (buffer)
-  (and
-   (not (get-buffer-window buffer t));; not visible
-   (not (s-starts-with-p (buffer-name buffer) " ")) ;; not be an internal buffer
-   (let ((mode (with-current-buffer buffer ;; have a 'junk' mode
-                 major-mode)))
-     (member mode '(ag-mode
-                    apropos-mode
-                    calendar-mode
-                    compilation-mode
-                    dired-mode
-                    help-mode
-                    magit-diff-mode
-                    magit-log-mode
-                    magit-process-mode
-                    Buffer-menu-mode
-                    )))
-   t))
-
-;; (defun clean-up-buffers ()
-;;   "Kill junk buffers"
-;;   (mapcar (function buffer-
-;;   )
-
-(setq vc-follow-symlinks 't)
